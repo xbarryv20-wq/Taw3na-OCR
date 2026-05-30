@@ -1,0 +1,6 @@
+{
+  "name": "Taw3na",
+  "description": "An automated system to extract structured client details from passports and visas, configure prices, and generate Supabase sync JSON and SQL.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
