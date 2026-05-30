@@ -45,33 +45,10 @@ export default function App() {
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffAvatar, setNewStaffAvatar] = useState<string | null>(null);
 
-  // Client registry list database rows - loaded from localStorage or default simulation
+  // Client registry list database rows - loaded from localStorage initially, then synced from Supabase
   const [clientRecords, setClientRecords] = useState<ClientRecord[]>(() => {
     const saved = localStorage.getItem("visa_clients_db");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            id: "rec_1",
-            last_name: "BARRY",
-            first_name: "MOSTAPHA YOUCEF",
-            passport_number: "DZ9845129",
-            dob: "1994-08-25",
-            issue_date: "2021-03-10",
-            expiry_date: "2031-03-09",
-            place_of_issue: "ALGIERS",
-            previous_visa_number: "EU74819032",
-            visa_from: "2024-06-01",
-            visa_to: "2024-12-01",
-            phone_number: "+213 555 12 34 56",
-            client_pic: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-            visa_pic: null,
-            category: "ALG1",
-            payment: { category: "ALG1", price: "16", currency: "M" },
-            staff_member: "BARRY",
-            created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-          },
-        ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Dialog Stepper modal visibility toggles
@@ -101,10 +78,89 @@ export default function App() {
     localStorage.setItem("visa_staff_db", JSON.stringify(staffMembers));
   }, [staffMembers]);
 
+  // Load clients and staff from Supabase on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [clientsRes, staffRes] = await Promise.all([
+          fetch("/api/clients"),
+          fetch("/api/staff"),
+        ]);
+
+        if (clientsRes.ok) {
+          const clientsData = await clientsRes.json();
+          if (clientsData.success && Array.isArray(clientsData.clients) && clientsData.clients.length > 0) {
+            const mapped: ClientRecord[] = clientsData.clients.map((c: any, i: number) => ({
+              id: "rec_" + (c.id || i),
+              last_name: c.last_name || null,
+              first_name: c.first_name || null,
+              passport_number: c.passport_number || null,
+              dob: c.dob || null,
+              issue_date: c.issue_date || null,
+              expiry_date: c.expiry_date || null,
+              place_of_issue: c.place_of_issue || null,
+              previous_visa_number: c.previous_visa_number || null,
+              visa_from: c.visa_from || null,
+              visa_to: c.visa_to || null,
+              phone_number: c.phone_number || null,
+              client_pic: c.photo_url || null,
+              visa_pic: c.photo_url_1 || null,
+              category: c.category || "",
+              payment: c.payment || { category: "", price: "0", currency: "M" },
+              staff_member: c.staff_member || "",
+              account_email: c.account_email || "taw3na@mkservice.com",
+              user_id: c.user_id,
+              created_at: c.created_at || new Date().toISOString(),
+            }));
+            setClientRecords(mapped);
+          }
+        }
+
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          if (staffData.success && Array.isArray(staffData.staff) && staffData.staff.length > 0) {
+            const mapped: StaffMember[] = staffData.staff.map((s: any) => ({
+              id: s.staff_id,
+              name: s.name,
+              avatarUrl: s.avatar_url || null,
+            }));
+            setStaffMembers(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load from Supabase, using local data:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
   // Toast notifier
   const showToast = (msg: string) => {
     setSuccessToast(msg);
     setTimeout(() => setSuccessToast(null), 3500);
+  };
+
+  // Sync staff member to Supabase
+  const syncStaffToSupabase = async (staff_id: string, data: { name?: string; avatar_url?: string | null }) => {
+    try {
+      await fetch(`/api/staff/${encodeURIComponent(staff_id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      console.warn("Failed to sync staff update to Supabase:", err);
+    }
+  };
+
+  const deleteStaffFromSupabase = async (staff_id: string) => {
+    try {
+      await fetch(`/api/staff/${encodeURIComponent(staff_id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Failed to sync staff deletion to Supabase:", err);
+    }
   };
 
   // Pricing configuration inline updates
@@ -823,6 +879,11 @@ const { data, error } = await supabase
                     setStaffMembers((prev) => [...prev, newStaff]);
                     setNewStaffName("");
                     setNewStaffAvatar(null);
+                    fetch("/api/staff", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: newStaff.name, avatar_url: newStaff.avatarUrl }),
+                    }).catch((err) => console.warn("Failed to sync staff to Supabase:", err));
                     showToast(`Staff member "${newStaff.name}" registered!`);
                   }}
                   className="w-full md:w-auto px-5 py-2.2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition shrink-0 cursor-pointer"
@@ -874,11 +935,13 @@ const { data, error } = await supabase
                                 if (file) {
                                   const r = new FileReader();
                                   r.onload = () => {
+                                    const newUrl = r.result as string;
                                     setStaffMembers((prev) =>
                                       prev.map((item) =>
-                                        item.id === sm.id ? { ...item, avatarUrl: r.result as string } : item
+                                        item.id === sm.id ? { ...item, avatarUrl: newUrl } : item
                                       )
                                     );
+                                    syncStaffToSupabase(sm.id, { avatar_url: newUrl });
                                     showToast(`PFP photo updated for "${sm.name}"`);
                                   };
                                   r.readAsDataURL(file);
@@ -906,6 +969,7 @@ const { data, error } = await supabase
                                     prev.map((item) => (item.id === sm.id ? { ...item, name: "Representative" } : item))
                                   );
                                 }
+                              syncStaffToSupabase(sm.id, { name: e.target.value });
                             }}
                             className="w-full bg-transparent font-bold text-white text-xs border-b border-transparent focus:border-indigo-500 py-0.5 outline-none"
                             placeholder="Representative Name"
@@ -920,6 +984,7 @@ const { data, error } = await supabase
                           type="button"
                           onClick={() => {
                             setStaffMembers((prev) => prev.filter((item) => item.id !== sm.id));
+                            deleteStaffFromSupabase(sm.id);
                             showToast(`Deleted staff: "${sm.name}"`);
                           }}
                           className="p-1.5 bg-slate-900/40 text-slate-400 border border-slate-800 hover:bg-rose-950/40 hover:text-rose-450 hover:border-rose-900/40 rounded-lg transition"

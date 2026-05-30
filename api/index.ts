@@ -507,6 +507,211 @@ app.delete("/api/delete-from-supabase", async (req, res) => {
   }
 });
 
+// API endpoint to fetch clients from Supabase for taw3na account
+app.get("/api/clients", async (req, res) => {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.json({ success: false, clients: [], message: "No Supabase credentials configured." });
+    }
+
+    let cleanUrl = supabaseUrl.trim();
+    if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+    const endpoint = cleanUrl.includes("/rest/v1")
+      ? `${cleanUrl}/clients?user_id=eq.7a7165b8-716d-4d96-aa64-f8a02d1fbc0f&order=created_at.desc`
+      : `${cleanUrl}/rest/v1/clients?user_id=eq.7a7165b8-716d-4d96-aa64-f8a02d1fbc0f&order=created_at.desc`;
+
+    const response = await fetch(endpoint, {
+      headers: {
+        "apikey": supabaseAnonKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(500).json({ success: false, clients: [], message: `Supabase returned ${response.status}` });
+    }
+
+    const data = await response.json();
+    res.json({ success: true, clients: data });
+  } catch (err: any) {
+    console.error("Error fetching clients:", err);
+    res.status(500).json({ success: false, clients: [], message: err.message });
+  }
+});
+
+// API endpoint to fetch staff directory from Supabase
+app.get("/api/staff", async (req, res) => {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.json({ success: false, staff: [], message: "No Supabase credentials configured." });
+    }
+
+    let cleanUrl = supabaseUrl.trim();
+    if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+    const endpoint = cleanUrl.includes("/rest/v1")
+      ? `${cleanUrl}/agency_staff?order=created_at.asc`
+      : `${cleanUrl}/rest/v1/agency_staff?order=created_at.asc`;
+
+    const response = await fetch(endpoint, {
+      headers: {
+        "apikey": supabaseAnonKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(500).json({ success: false, staff: [], message: `Supabase returned ${response.status}` });
+    }
+
+    const data = await response.json();
+    res.json({ success: true, staff: data });
+  } catch (err: any) {
+    console.error("Error fetching staff:", err);
+    res.status(500).json({ success: false, staff: [], message: err.message });
+  }
+});
+
+// API endpoint to add a staff member
+app.post("/api/staff", async (req, res) => {
+  try {
+    const { name, avatar_url } = req.body;
+    if (!name) return res.status(400).json({ error: "Missing 'name' parameter." });
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(500).json({ error: "Supabase credentials not configured." });
+    }
+
+    let cleanUrl = supabaseUrl.trim();
+    if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+    const endpoint = cleanUrl.includes("/rest/v1")
+      ? `${cleanUrl}/agency_staff`
+      : `${cleanUrl}/rest/v1/agency_staff`;
+
+    const staff_id = "staff_" + Date.now().toString(36);
+    const body = { staff_id, name, avatar_url: avatar_url || null };
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseAnonKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText);
+    }
+
+    const data = await response.json();
+    res.json({ success: true, staff: Array.isArray(data) ? data[0] : data });
+  } catch (err: any) {
+    console.error("Error adding staff:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API endpoint to update a staff member
+app.put("/api/staff/:staff_id", async (req, res) => {
+  try {
+    const { staff_id } = req.params;
+    const { name, avatar_url } = req.body;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(500).json({ error: "Supabase credentials not configured." });
+    }
+
+    let cleanUrl = supabaseUrl.trim();
+    if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+    const baseEndpoint = cleanUrl.includes("/rest/v1")
+      ? `${cleanUrl}/agency_staff`
+      : `${cleanUrl}/rest/v1/agency_staff`;
+    const endpoint = `${baseEndpoint}?staff_id=eq.${encodeURIComponent(staff_id)}`;
+
+    const body: any = {};
+    if (name !== undefined) body.name = name;
+    if (avatar_url !== undefined) body.avatar_url = avatar_url;
+
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseAnonKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText);
+    }
+
+    const data = await response.json();
+    res.json({ success: true, staff: Array.isArray(data) ? data[0] : data });
+  } catch (err: any) {
+    console.error("Error updating staff:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API endpoint to delete a staff member
+app.delete("/api/staff/:staff_id", async (req, res) => {
+  try {
+    const { staff_id } = req.params;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(500).json({ error: "Supabase credentials not configured." });
+    }
+
+    let cleanUrl = supabaseUrl.trim();
+    if (cleanUrl.endsWith("/")) cleanUrl = cleanUrl.slice(0, -1);
+    const baseEndpoint = cleanUrl.includes("/rest/v1")
+      ? `${cleanUrl}/agency_staff`
+      : `${cleanUrl}/rest/v1/agency_staff`;
+    const endpoint = `${baseEndpoint}?staff_id=eq.${encodeURIComponent(staff_id)}`;
+
+    const response = await fetch(endpoint, {
+      method: "DELETE",
+      headers: {
+        "apikey": supabaseAnonKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+        "Prefer": "return=representation"
+      }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error("Error deleting staff:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve static files in production
 const distPath = path.join(process.cwd(), "dist");
 app.use(express.static(distPath));
