@@ -373,11 +373,12 @@ export default function AddClientModal({
         }, 1200);
 
       } else {
-        throw new Error("API responded with error.");
+        const errorBody = await response.text();
+        throw new Error(errorBody || "API responded with error.");
       }
     } catch (err: any) {
       console.error("Gemini extraction error:", err);
-      setErrorBanner("Failed to extract data using Gemini backend API.");
+      setErrorBanner("Extraction failed: " + err.message);
       setIsExtracting(false);
     }
   };
