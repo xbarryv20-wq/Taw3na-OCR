@@ -83,7 +83,7 @@ Output JSON schema:
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", imageUrl: image }
+              { type: "image_url", imageUrl: { url: image } }
             ]
           }],
           responseFormat: { type: "json_object" }
