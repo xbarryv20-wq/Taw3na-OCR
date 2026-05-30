@@ -8,15 +8,13 @@ app.use(express.json({ limit: "50mb" }));
 
 app.post("/api/extract", async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, image_visa } = req.body;
     if (!image) {
       return res.status(400).json({ error: "Missing 'image' parameter." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "GEMINI_API_KEY environment variable is missing." });
-    }
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
 
     const prompt = `You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
 
@@ -57,53 +55,101 @@ Output JSON schema:
   }
 }`;
 
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+    let extractedText = null;
+    let usedProvider = "Gemini";
 
-    let geminiData;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [
-                { text: prompt },
-                { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-              ]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
+    // 1. Try Gemini (Primary) if API Key is configured
+    if (geminiApiKey) {
+      try {
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+        const parts: any[] = [
+          { text: prompt },
+          { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+        ];
+
+        if (image_visa) {
+          const base64DataVisa = image_visa.replace(/^data:image\/\w+;base64,/, "");
+          parts.push({ inlineData: { mimeType: "image/jpeg", data: base64DataVisa } });
         }
-      );
 
-      if (geminiResponse.status === 429 && attempt < 2) {
-        await new Promise(r => setTimeout(r, 2000));
-        continue;
+        let geminiData;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const geminiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ role: "user", parts }],
+                generationConfig: { responseMimeType: "application/json" }
+              })
+            }
+          );
+
+          if (geminiResponse.status === 429 && attempt < 1) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          if (geminiResponse.ok) {
+            geminiData = await geminiResponse.json();
+            extractedText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+            break;
+          }
+        }
+      } catch (geminiErr) {
+        console.warn("Gemini OCR extraction failed, falling back to Mistral:", geminiErr);
       }
-      if (!geminiResponse.ok) {
-        const errBody = await geminiResponse.text();
-        throw new Error(`Gemini API error (${geminiResponse.status}): ${errBody}`);
-      }
-      geminiData = await geminiResponse.json();
-      break;
-    }
-    const outputText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!outputText) {
-      const blockReason = geminiData?.promptFeedback?.blockReason;
-      throw new Error(blockReason ? `Prompt blocked: ${blockReason}` : "Empty response from Gemini.");
     }
 
-    const cleanedJson = outputText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+    // 2. Fallback to Mistral if Gemini failed or didn't return text
+    if (!extractedText && mistralApiKey) {
+      usedProvider = "Mistral";
+      try {
+        const contentParts: any[] = [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: image } }
+        ];
+
+        if (image_visa) {
+          contentParts.push({ type: "image_url", image_url: { url: image_visa } });
+        }
+
+        const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${mistralApiKey}`
+          },
+          body: JSON.stringify({
+            model: "pixtral-12b-2409",
+            messages: [{ role: "user", content: contentParts }],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (mistralResponse.ok) {
+          const mistralData = await mistralResponse.json();
+          extractedText = mistralData?.choices?.[0]?.message?.content;
+        } else {
+          const errBody = await mistralResponse.text();
+          console.error(`Mistral fallback API error: ${errBody}`);
+        }
+      } catch (mistralErr) {
+        console.error("Mistral fallback OCR extraction failed:", mistralErr);
+      }
+    }
+
+    if (!extractedText) {
+      throw new Error("Both Gemini and Mistral OCR extraction endpoints failed or returned empty results.");
+    }
+
+    console.log(`Successfully extracted data using ${usedProvider}`);
+    const cleanedJson = extractedText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
     res.json(JSON.parse(cleanedJson));
 
   } catch (err: any) {
-    console.error("Gemini Extraction Error:", err);
-    res.status(500).json({ error: err.message || "Internal server error." });
+    console.error("Extraction Endpoint Error:", err);
+    res.status(500).json({ error: err.message || "Internal server error during data extraction." });
   }
 });
 

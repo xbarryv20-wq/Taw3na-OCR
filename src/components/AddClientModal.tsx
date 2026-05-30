@@ -360,12 +360,25 @@ export default function AddClientModal({
       // fallback to original if compression fails
     }
 
-    // Call real /api/extract Express endpoint calling Gemini
+    let compressedVisaImage = null;
+    if (visaPic) {
+      try {
+        compressedVisaImage = await compressImage(visaPic);
+      } catch {
+        compressedVisaImage = visaPic;
+      }
+    }
+
+    // Call real /api/extract Express endpoint calling Gemini with fallback to Mistral
     try {
       const response = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: compressedImage, category: selectedCategory }),
+        body: JSON.stringify({ 
+          image: compressedImage, 
+          image_visa: compressedVisaImage,
+          category: selectedCategory 
+        }),
       });
 
       if (response.ok) {
