@@ -39,16 +39,26 @@ app.post("/api/extract", async (req, res) => {
     const mistral = getMistralClient();
     
     const prompt = `
-You are an expert OCR and visa processing agent. Examine the uploaded image and extract passport or visa details into a valid JSON object.
+You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
 
-CRITICAL INSTRUCTIONS:
-- last_name: Extract the family name/surname. DO NOT SWAP with given names.
-- first_name: Extract the given names.
-- Date fields (dob, issue_date, expiry_date, visa_from, visa_to): YOU MUST FORMAT ALL DATES STRICTLY AS YYYY-MM-DD. If the input is DD/MM/YYYY, convert it to YYYY-MM-DD.
-- EXTRACT EVERY FIELD listed in the schema below. Do NOT skip any field.
-- IMPORTANT: The image may be a passport page that also contains a visa sticker. Look for visa number, visa valid from, and visa valid to on the document and populate previous_visa_number, visa_from, visa_to accordingly. Do not leave these null if they appear on the document.
+Field mapping — use these exact labels on the document:
+- last_name: the surname / family name (e.g. "SMITH")
+- first_name: the given name(s) (e.g. "John")
+- dob: date of birth — label says "Date of Birth" or "DOB"
+- passport_number: passport number — label says "Passport No." or "Passport Number"
+- issue_date: date of issue — label says "Date of Issue" or "Issued"
+- expiry_date: date of expiry — label says "Date of Expiry" or "Expires"
+- place_of_issue: place of issue — label says "Place of Issue" or "Issuing Authority"
+- previous_visa_number: visa number — label says "Visa Number" or "Visa No." (NOT passport number)
+- visa_from: visa valid from date — label says "Valid From" or "Visa Valid From"
+- visa_to: visa valid until date — label says "Valid Until" or "Visa Valid To" or "Expiry"
 
-Follow this schema:
+CRITICAL:
+- ALL dates MUST be YYYY-MM-DD format. Convert DD/MM/YYYY if needed.
+- DO NOT mix up dates. Each date field has a specific label on the document. Read the label carefully.
+- If a field is not visible on the document, set it to null. Do NOT guess.
+
+Output JSON schema:
 {
   "document_type": "passport" | "visa" | "unknown",
   "is_blurry": boolean,
