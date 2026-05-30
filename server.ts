@@ -49,9 +49,9 @@ Field mapping — use these exact labels on the document:
 - issue_date: date of issue — label says "Date of Issue" or "Issued"
 - expiry_date: date of expiry — label says "Date of Expiry" or "Expires"
 - place_of_issue: place of issue — label says "Place of Issue" or "Issuing Authority"
-- previous_visa_number: visa number — label says "Visa Number" or "Visa No." (NOT passport number)
-- visa_from: visa valid from date — label says "Valid From" or "Visa Valid From"
-- visa_to: visa valid until date — label says "Valid Until" or "Visa Valid To" or "Expiry"
+- previous_visa_number: visa number — found next to the label "ESP" (NOT passport number)
+- visa_from: visa valid from date — label says "Du" or "Del" (French "from")
+- visa_to: visa valid until date — label says "Au" or "Al" (French "until")
 
 CRITICAL:
 - ALL dates MUST be YYYY-MM-DD format. Convert DD/MM/YYYY if needed.
