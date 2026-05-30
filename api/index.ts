@@ -173,6 +173,7 @@ app.post("/api/push-to-supabase", async (req, res) => {
       photo_url_1: clientData.visa_pic || null,
       appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0],
       account_email: clientData.account_email,
+      staff_member: clientData.staff_member || '',
     };
 
     let attempts = 0;
@@ -343,6 +344,7 @@ app.post("/api/update-in-supabase", async (req, res) => {
       photo_url_1: clientData.visa_pic || null,
       appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0],
       account_email: clientData.account_email,
+      staff_member: clientData.staff_member || '',
     };
 
     let attempts = 0;
