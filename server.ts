@@ -181,10 +181,10 @@ app.post("/api/push-to-supabase", async (req, res) => {
       visa_to: clientData.visa_to,
       phone_number: clientData.phone_number,
       category: clientData.category,
-      payment: clientData.payment,
-      photo_url: clientData.client_pic || null,
-      photo_url_1: clientData.visa_pic || null,
-      appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0],
+      payment: clientData.payment, // Matches jsonb type in schema
+      photo_url: clientData.client_pic || null, // Maps to main applicant face photo in DB
+      photo_url_1: clientData.visa_pic || null, // Maps to second uploaded image in DB (visa sticker if uploaded)
+      appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0], // Matches NOT NULL field in schema, auto-stripped if missing in DB
       account_email: clientData.account_email,
       staff_member: clientData.staff_member || '',
     };
@@ -197,7 +197,7 @@ app.post("/api/push-to-supabase", async (req, res) => {
 
     while (attempts < maxAttempts) {
       const response = await fetch(endpoint, {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": supabaseAnonKey,
@@ -206,71 +206,6 @@ app.post("/api/push-to-supabase", async (req, res) => {
         },
         body: JSON.stringify(currentRow)
       });
-
-      if (response.ok) {
-        finalResponseData = await response.json().catch(() => ({}));
-        break;
-      }
-
-      const errText = await response.text();
-      let errObj: any = null;
-      try {
-        errObj = JSON.parse(errText);
-      } catch (_) {}
-
-      const errCode = errObj?.code;
-      const errMsg = errObj?.message || errText || response.statusText;
-
-      // Check if it's an undefined column error
-      const isMissingColumnError = 
-        errCode === "42703" || 
-        errCode === "PGRST205" || 
-        errCode === "PGRST200" ||
-        (errMsg && (
-          (errMsg.includes("column") && errMsg.includes("does not exist")) ||
-          (errMsg.includes("column") && errMsg.includes("schema cache")) ||
-          (errMsg.includes("Could not find") && errMsg.includes("column"))
-        ));
-
-      if (isMissingColumnError) {
-        let missingColumn = "";
-        const pgMatch = errMsg.match(/column "([^"]+)"/);
-        if (pgMatch && pgMatch[1]) {
-          missingColumn = pgMatch[1];
-        } else {
-          const postgrestMatch = errMsg.match(/Could not find the '([^']+)' column/);
-          if (postgrestMatch && postgrestMatch[1]) {
-            missingColumn = postgrestMatch[1];
-          }
-        }
-
-        if (missingColumn) {
-          console.warn(`[Supabase Update Sync] Stripping missing table column "${missingColumn}" and retrying...`);
-          delete (currentRow as any)[missingColumn];
-          strippedColumns.push(missingColumn);
-          attempts++;
-          continue;
-        }
-      }
-
-      console.error(`[Supabase Update Failed] Response status ${response.status}:`, errMsg);
-      throw new Error(errMsg);
-    }
-
-    if (attempts >= maxAttempts) {
-      throw new Error("Maximum database schema resolution attempts exceeded during update.");
-    }
-
-    const prunesMsg = strippedColumns.length > 0 
-      ? ` (Pruned missing columns: ${strippedColumns.join(", ")})` 
-      : "";
-
-    return res.json({
-      success: true,
-      simulated: false,
-      message: `Data successfully updated and propagate synced directly to Supabase!${prunesMsg}`,
-      data: finalResponseData
-    });
 
       if (response.ok) {
         finalResponseData = await response.json().catch(() => ({}));
@@ -432,7 +367,7 @@ app.post("/api/update-in-supabase", async (req, res) => {
       visa_to: clientData.visa_to,
       phone_number: clientData.phone_number,
       category: clientData.category,
-      payment: clientData.payment,
+      payment: clientData.payment, 
       photo_url: clientData.client_pic || null,
       photo_url_1: clientData.visa_pic || null,
       appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0],
@@ -448,7 +383,7 @@ app.post("/api/update-in-supabase", async (req, res) => {
 
     while (attempts < maxAttempts) {
       const response = await fetch(endpoint, {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "apikey": supabaseAnonKey,
@@ -457,108 +392,6 @@ app.post("/api/update-in-supabase", async (req, res) => {
         },
         body: JSON.stringify(currentRow)
       });
-
-      if (response.ok) {
-        finalResponseData = await response.json().catch(() => ({}));
-        break;
-      }
-
-      const errText = await response.text();
-      let errObj: any = null;
-      try {
-        errObj = JSON.parse(errText);
-      } catch (_) {}
-
-      const errCode = errObj?.code;
-      const errMsg = errObj?.message || errText || response.statusText;
-
-      // Handle undefined column error: Postgres error code "42703" or PGRST200/PGRST204/PGRST205 for missing column
-      const isMissingColumnError = 
-        errCode === "42703" || 
-        errCode === "PGRST205" || 
-        errCode === "PGRST200" ||
-        (errMsg && (
-          (errMsg.includes("column") && errMsg.includes("does not exist")) ||
-          (errMsg.includes("column") && errMsg.includes("schema cache")) ||
-          (errMsg.includes("Could not find") && errMsg.includes("column"))
-        ));
-
-      if (isMissingColumnError) {
-        let missingColumn = "";
-        
-        // Pattern A: column "xxx" of relation "yyy" does not exist
-        const pgMatch = errMsg.match(/column "([^"]+)"/);
-        if (pgMatch && pgMatch[1]) {
-          missingColumn = pgMatch[1];
-        } else {
-          // Pattern B: Could not find the 'xxx' column of 'yyy' in the schema cache
-          const postgrestMatch = errMsg.match(/Could not find the '([^']+)' column/);
-          if (postgrestMatch && postgrestMatch[1]) {
-            missingColumn = postgrestMatch[1];
-          }
-        }
-
-        if (missingColumn) {
-          console.warn(`[Supabase Sync] Stripping missing table column "${missingColumn}" and retrying...`);
-          delete (currentRow as any)[missingColumn];
-          strippedColumns.push(missingColumn);
-          attempts++;
-          continue;
-        }
-      }
-
-      // Handle table not found error: Postgres error code "42P01"
-      if (errCode === "42P01" || (errMsg && errMsg.includes("relation") && errMsg.includes("does not exist"))) {
-        throw new Error("Table 'clients' does not exist in your Supabase database. Please create a 'clients' table in your Supabase database first.");
-      }
-
-      // Handle unique violation / duplicate key: Postgres error code "23505"
-      if (errCode === "23505" || (errMsg && errMsg.includes("duplicate key"))) {
-        throw new Error(`Duplicate entry: An applicant with passport number '${currentRow.passport_number}' is already registered in your database.`);
-      }
-
-      // Handle NOT NULL constraint violations (e.g. null value in column "user_id" violates not-null constraint)
-      if (errCode === "23502" || (errMsg && errMsg.includes("violates not-null constraint"))) {
-        throw new Error(
-          `Supabase Database Constraint: ${errMsg}\n\n` +
-          "🔧 QUICK FIX SQL SCRIPT:\n" +
-          "Run this in your Supabase dashboard SQL Editor to make columns optional for offline registry submissions:\n\n" +
-          "ALTER TABLE public.clients ALTER COLUMN user_id DROP NOT NULL;\n" +
-          "ALTER TABLE public.clients ALTER COLUMN appointment_date DROP NOT NULL;"
-        );
-      }
-
-      // Handle row-level policy (RLP) or permission blocks: Oracle/Postgres API blocks
-      if (response.status === 401 || response.status === 403 || errCode === "42501" || (errMsg && errMsg.includes("permission denied"))) {
-        throw new Error(
-          "Supabase RLS Permissions Blocked: Insert permission denied.\n\n" +
-          "🔧 QUICK FIX SQL SCRIPT:\n" +
-          "Run this in your Supabase dashboard SQL Editor to disable Row Level Security (RLS) or authorize insert submissions:\n\n" +
-          "ALTER TABLE public.clients DISABLE ROW LEVEL SECURITY;\n\n" +
-          "-- OR keep RLS enabled but add public insert authorization policy:\n" +
-          "CREATE POLICY \"Allow public insertions\" ON public.clients FOR INSERT WITH CHECK (true);"
-        );
-      }
-
-      // For any other kind of error, throw it
-      console.error(`[Supabase Sync Failed] Response status ${response.status}:`, errMsg);
-      throw new Error(errMsg);
-    }
-
-    if (attempts >= maxAttempts) {
-      throw new Error("Maximum database schema resolution attempts exceeded.");
-    }
-
-    const prunesMsg = strippedColumns.length > 0 
-      ? ` (Pruned missing columns: ${strippedColumns.join(", ")})` 
-      : "";
-
-    return res.json({
-      success: true,
-      simulated: false,
-      message: `Data successfully synchronized and saved directly to your Supabase instances!${prunesMsg}`,
-      data: finalResponseData
-    });
 
       if (response.ok) {
         finalResponseData = await response.json().catch(() => ({}));
