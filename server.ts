@@ -187,6 +187,7 @@ app.post("/api/push-to-supabase", async (req, res) => {
       appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0], // Matches NOT NULL field in schema, auto-stripped if missing in DB
       account_email: clientData.account_email,
       staff_member: clientData.staff_member || '',
+      user_id: clientData.user_id || '7a7165b8-716d-4d96-aa64-f8a02d1fbc0f',
     };
 
     let attempts = 0;
@@ -373,6 +374,7 @@ app.post("/api/update-in-supabase", async (req, res) => {
       appointment_date: clientData.appointment_date || new Date().toISOString().split("T")[0],
       account_email: clientData.account_email,
       staff_member: clientData.staff_member || '',
+      user_id: clientData.user_id || '7a7165b8-716d-4d96-aa64-f8a02d1fbc0f',
     };
 
     let attempts = 0;

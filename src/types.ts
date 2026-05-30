@@ -23,6 +23,7 @@ export interface ClientData {
   payment: PaymentInfo;
   staff_member: string; // 'BARRY' | 'MOSTAPHA' | 'YOUCEF'
   account_email: string;
+  user_id?: string;
 }
 
 export interface ClientRecord extends ClientData {

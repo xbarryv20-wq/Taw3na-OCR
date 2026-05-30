@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS public.clients (
   photo_url_1 TEXT,
   appointment_date TEXT DEFAULT to_char(now(), 'YYYY-MM-DD'),
   staff_member TEXT DEFAULT '',
-  account_email TEXT NOT NULL DEFAULT 'taw3na@mkservice.com'
+  account_email TEXT NOT NULL DEFAULT 'taw3na@mkservice.com',
+  user_id UUID DEFAULT '7a7165b8-716d-4d96-aa64-f8a02d1fbc0f'
 );
 
 -- Index for fast lookup by passport

@@ -510,6 +510,7 @@ export default function AddClientModal({
       },
       staff_member: selectedAgent,
       account_email: "taw3na@mkservice.com",
+      user_id: "7a7165b8-716d-4d96-aa64-f8a02d1fbc0f",
     };
 
     setIsSyncing(true);
