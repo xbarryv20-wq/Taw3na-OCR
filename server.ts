@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -12,19 +11,7 @@ const PORT = 3000;
 // Increase request size limit to handle base64 image submissions
 app.use(express.json({ limit: "50mb" }));
 
-let genAIClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI {
-  if (!genAIClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is missing.");
-    }
-    genAIClient = new GoogleGenAI({ apiKey });
-  }
-  return genAIClient;
-}
-
-// API endpoint for intelligent passport/visa data extraction
+// API endpoint for intelligent passport/visa data extraction using Gemini REST API
 app.post("/api/extract", async (req, res) => {
   try {
     const { image } = req.body;
@@ -32,7 +19,10 @@ app.post("/api/extract", async (req, res) => {
       return res.status(400).json({ error: "Missing 'image' parameter." });
     }
 
-    const genAI = getGeminiClient();
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "GEMINI_API_KEY environment variable is missing." });
+    }
 
     const prompt = `You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
 
@@ -76,23 +66,36 @@ Output JSON schema:
     // Strip data URL prefix to get raw base64 for Gemini
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
-    const response = await genAI.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: {
-        role: "user",
-        parts: [
-          { text: prompt },
-          { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json"
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+            ]
+          }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        })
       }
-    });
+    );
 
-    const outputText = response.text;
+    if (!geminiResponse.ok) {
+      const errBody = await geminiResponse.text();
+      throw new Error(`Gemini API error (${geminiResponse.status}): ${errBody}`);
+    }
+
+    const geminiData = await geminiResponse.json();
+    const outputText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!outputText) {
-      throw new Error("Empty response from Gemini.");
+      const blockReason = geminiData?.promptFeedback?.blockReason;
+      throw new Error(blockReason ? `Prompt blocked: ${blockReason}` : "Empty response from Gemini.");
     }
 
     const cleanedJson = outputText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
