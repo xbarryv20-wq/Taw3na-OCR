@@ -45,6 +45,8 @@ CRITICAL INSTRUCTIONS:
 - last_name: Extract the family name/surname. DO NOT SWAP with given names.
 - first_name: Extract the given names.
 - Date fields (dob, issue_date, expiry_date, visa_from, visa_to): YOU MUST FORMAT ALL DATES STRICTLY AS YYYY-MM-DD. If the input is DD/MM/YYYY, convert it to YYYY-MM-DD.
+- EXTRACT EVERY FIELD listed in the schema below. Do NOT skip any field.
+- IMPORTANT: The image may be a passport page that also contains a visa sticker. Look for visa number, visa valid from, and visa valid to on the document and populate previous_visa_number, visa_from, visa_to accordingly. Do not leave these null if they appear on the document.
 
 Follow this schema:
 {

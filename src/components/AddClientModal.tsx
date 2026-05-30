@@ -316,6 +316,30 @@ export default function AddClientModal({
     showToast("Captured snapshot from simulated camera successfully!");
   };
 
+  // Compress a base64 image to reduce payload size (Vercel limit ~4.5MB)
+  const compressImage = (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > maxWidth) {
+          h = h * (maxWidth / w);
+          w = maxWidth;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(dataUrl); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
+      img.src = dataUrl;
+    });
+  };
+
   // Perform AI Extraction (Calls backend Gemini OCR service)
   const proceedToOcrExtraction = async () => {
     if (!passportPic) {
@@ -328,12 +352,20 @@ export default function AddClientModal({
     setOcrConfidence(null);
     setExtractedDocType(null);
 
+    // Compress image before sending to avoid Payload Too Large
+    let compressedImage = passportPic;
+    try {
+      compressedImage = await compressImage(passportPic);
+    } catch {
+      // fallback to original if compression fails
+    }
+
     // Call real /api/extract Express endpoint calling Gemini
     try {
       const response = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: passportPic, category: selectedCategory }),
+        body: JSON.stringify({ image: compressedImage, category: selectedCategory }),
       });
 
       if (response.ok) {
@@ -1026,7 +1058,7 @@ export default function AddClientModal({
                     )}
                   </div>
 
-                  {visaPic && (
+                  {(visaPic || previous_visa_number || visa_from || visa_to) && (
                     <>
                       <div className="col-span-1 sm:col-span-2 border-t border-slate-800 pt-3 mt-1">
                         <span className="font-bold text-indigo-400">Extracted Prior Visa Sticker Info</span>
