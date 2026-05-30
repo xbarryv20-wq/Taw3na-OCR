@@ -556,6 +556,13 @@ async function bootServer() {
   });
 }
 
-bootServer().catch((e) => {
-  console.error("Error launching server:", e);
-});
+// Export app for Vercel serverless
+export default app;
+
+// Only boot the server when run directly (not imported as a module)
+const isVercel = process.env.VERCEL === "1";
+if (!isVercel) {
+  bootServer().catch((e) => {
+    console.error("Error launching server:", e);
+  });
+}
