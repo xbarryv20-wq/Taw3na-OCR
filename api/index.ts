@@ -59,32 +59,39 @@ Output JSON schema:
 
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-            ]
-          }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
-        })
+    let geminiData;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              role: "user",
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        }
+      );
+
+      if (geminiResponse.status === 429 && attempt < 2) {
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
       }
-    );
-
-    if (!geminiResponse.ok) {
-      const errBody = await geminiResponse.text();
-      throw new Error(`Gemini API error (${geminiResponse.status}): ${errBody}`);
+      if (!geminiResponse.ok) {
+        const errBody = await geminiResponse.text();
+        throw new Error(`Gemini API error (${geminiResponse.status}): ${errBody}`);
+      }
+      geminiData = await geminiResponse.json();
+      break;
     }
-
-    const geminiData = await geminiResponse.json();
     const outputText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!outputText) {
       const blockReason = geminiData?.promptFeedback?.blockReason;
