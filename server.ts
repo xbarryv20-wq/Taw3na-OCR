@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import { Mistral } from "@mistralai/mistralai";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -12,34 +12,29 @@ const PORT = 3000;
 // Increase request size limit to handle base64 image submissions
 app.use(express.json({ limit: "50mb" }));
 
-// Lazy initializer for Mistral client
-let mistralClient: Mistral | null = null;
-function getMistralClient(): Mistral {
-  if (!mistralClient) {
-    const apiKey = process.env.MISTRAL_API_KEY;
+let genAIClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI {
+  if (!genAIClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("MISTRAL_API_KEY environment variable is missing.");
+      throw new Error("GEMINI_API_KEY environment variable is missing.");
     }
-    mistralClient = new Mistral({
-      apiKey: apiKey,
-    });
+    genAIClient = new GoogleGenAI({ apiKey });
   }
-  return mistralClient;
+  return genAIClient;
 }
 
 // API endpoint for intelligent passport/visa data extraction
 app.post("/api/extract", async (req, res) => {
   try {
-    const { image, category } = req.body;
+    const { image } = req.body;
     if (!image) {
       return res.status(400).json({ error: "Missing 'image' parameter." });
     }
 
-    // Prepare image for Mistral (supports base64 directly)
-    const mistral = getMistralClient();
-    
-    const prompt = `
-You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
+    const genAI = getGeminiClient();
+
+    const prompt = `You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
 
 Field mapping — use these exact labels on the document:
 - last_name: the surname / family name (e.g. "SMITH")
@@ -76,47 +71,35 @@ Output JSON schema:
     "visa_from": string | null,
     "visa_to": string | null
   }
-}
-`;
+}`;
 
-    let response;
-    let attempt = 0;
-    const maxAttempts = 3;
+    // Strip data URL prefix to get raw base64 for Gemini
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
-    while (attempt < maxAttempts) {
-      try {
-        response = await mistral.chat.complete({
-          model: "pixtral-12b-2409", // Mistral's OCR-capable model
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", imageUrl: { url: image } }
-            ]
-          }],
-          responseFormat: { type: "json_object" }
-        });
-        break;
-      } catch (err: any) {
-        attempt++;
-        if (attempt < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, attempt * 5000));
-          continue;
-        }
-        throw err;
+    const response = await genAI.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json"
       }
+    });
+
+    const outputText = response.text;
+    if (!outputText) {
+      throw new Error("Empty response from Gemini.");
     }
 
-    if (!response || !response.choices || response.choices.length === 0) {
-      throw new Error("Failed to get response from Mistral.");
-    }
-
-    const outputText = response.choices[0].message.content as string;
-    const cleanedJson = outputText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    const cleanedJson = outputText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
     res.json(JSON.parse(cleanedJson));
 
   } catch (err: any) {
-    console.error("Mistral Extraction Error:", err);
+    console.error("Gemini Extraction Error:", err);
     res.status(500).json({ error: err.message || "Internal server error." });
   }
 });

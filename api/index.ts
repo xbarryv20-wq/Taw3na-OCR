@@ -1,22 +1,102 @@
 import express from "express";
 import path from "path";
-import { Mistral } from "@mistralai/mistralai";
+import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
 
-let mistralClient: Mistral | null = null;
-function getMistralClient(): Mistral {
-  if (!mistralClient) {
-    const apiKey = process.env.MISTRAL_API_KEY;
+let genAIClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI {
+  if (!genAIClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("MISTRAL_API_KEY environment variable is missing.");
+      throw new Error("GEMINI_API_KEY environment variable is missing.");
     }
-    mistralClient = new Mistral({
-      apiKey: apiKey,
+    genAIClient = new GoogleGenAI({ apiKey });
+  }
+  return genAIClient;
+}
+
+app.post("/api/extract", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: "Missing 'image' parameter." });
+    }
+
+    const genAI = getGeminiClient();
+
+    const prompt = `You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
+
+Field mapping — use these exact labels on the document:
+- last_name: the surname / family name (e.g. "SMITH")
+- first_name: the given name(s) (e.g. "John")
+- dob: date of birth — label says "Date of Birth" or "DOB"
+- passport_number: passport number — label says "Passport No." or "Passport Number"
+- issue_date: date of issue — label says "Date of Issue" or "Issued"
+- expiry_date: date of expiry — label says "Date of Expiry" or "Expires"
+- place_of_issue: place of issue — label says "Place of Issue" or "Issuing Authority"
+- previous_visa_number: visa number — found next to the label "ESP" (NOT passport number)
+- visa_from: visa valid from date — label says "Du" or "Del" (French "from")
+- visa_to: visa valid until date — label says "Au" or "Al" (French "until")
+
+CRITICAL:
+- ALL dates MUST be YYYY-MM-DD format. Convert DD/MM/YYYY if needed.
+- DO NOT mix up dates. Each date field has a specific label on the document. Read the label carefully.
+- If a field is not visible on the document, set it to null. Do NOT guess.
+
+Output JSON schema:
+{
+  "document_type": "passport" | "visa" | "unknown",
+  "is_blurry": boolean,
+  "confidence_score": number,
+  "error_message": string | null,
+  "extracted_data": {
+    "last_name": string | null,
+    "first_name": string | null,
+    "dob": string | null,
+    "passport_number": string | null,
+    "issue_date": string | null,
+    "expiry_date": string | null,
+    "place_of_issue": string | null,
+    "previous_visa_number": string | null,
+    "visa_from": string | null,
+    "visa_to": string | null
+  }
+}`;
+
+    // Strip data URL prefix to get raw base64 for Gemini
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+
+    const response = await genAI.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: {
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json"
+      }
     });
+
+    const outputText = response.text;
+    if (!outputText) {
+      throw new Error("Empty response from Gemini.");
+    }
+
+    const cleanedJson = outputText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+    res.json(JSON.parse(cleanedJson));
+
+  } catch (err: any) {
+    console.error("Gemini Extraction Error:", err);
+    res.status(500).json({ error: err.message || "Internal server error." });
+  }
+});
   }
   return mistralClient;
 }
