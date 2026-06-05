@@ -56,10 +56,69 @@ Output JSON schema:
 }`;
 
     let extractedText = null;
-    let usedProvider = "Gemini";
+    let usedProvider = "Mistral OCR";
 
-    // 1. Try Gemini (Primary) if API Key is configured
-    if (geminiApiKey) {
+    // 1. Try Mistral OCR (Primary) — purpose-built for passport / document OCR
+    if (mistralApiKey) {
+      try {
+        const ocrImages = image_visa ? [image, image_visa] : [image];
+        const ocrResults = await Promise.all(
+          ocrImages.map(async (img) => {
+            const ocrResponse = await fetch("https://api.mistral.ai/v1/ocr", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${mistralApiKey}`
+              },
+              body: JSON.stringify({
+                model: "mistral-ocr-latest",
+                document: { type: "image_url", image_url: img },
+                include_image_base64: false
+              })
+            });
+            if (!ocrResponse.ok) {
+              const errBody = await ocrResponse.text();
+              throw new Error(`Mistral OCR ${ocrResponse.status}: ${errBody}`);
+            }
+            const ocrData = await ocrResponse.json();
+            return ocrData?.pages?.map((p: any) => p.markdown).filter(Boolean).join("\n\n") || "";
+          })
+        );
+
+        const combinedOcr = ocrResults.filter(Boolean).join("\n\n--- VISA STICKER ---\n");
+        if (combinedOcr.trim().length > 0) {
+          const structureResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${mistralApiKey}`
+            },
+            body: JSON.stringify({
+              model: "mistral-small-latest",
+              messages: [
+                { role: "system", content: "You extract structured JSON from OCR text exactly as instructed. Output only the JSON object, no other text or markdown fences." },
+                { role: "user", content: `${prompt}\n\n--- OCR TEXT ---\n${combinedOcr}` }
+              ],
+              response_format: { type: "json_object" }
+            })
+          });
+
+          if (structureResponse.ok) {
+            const structureData = await structureResponse.json();
+            extractedText = structureData?.choices?.[0]?.message?.content;
+          } else {
+            const errBody = await structureResponse.text();
+            console.warn(`Mistral chat structure API error: ${structureResponse.status} ${errBody}`);
+          }
+        }
+      } catch (ocrErr) {
+        console.warn("Mistral OCR pipeline failed, falling back to Gemini:", ocrErr);
+      }
+    }
+
+    // 2. Fallback to Gemini if Mistral OCR failed
+    if (!extractedText && geminiApiKey) {
+      usedProvider = "Gemini";
       try {
         const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
         const parts: any[] = [
@@ -101,7 +160,7 @@ Output JSON schema:
       }
     }
 
-    // 2. Fallback to Mistral if Gemini failed or didn't return text
+    // 3. Final fallback to Mistral chat (pixtral) if both above failed
     if (!extractedText && mistralApiKey) {
       usedProvider = "Mistral";
       try {
