@@ -34,6 +34,7 @@ body {
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
   touch-action: manipulation;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 body.modal-open {
@@ -123,3 +124,121 @@ input[type="number"] {
 input[type="file"] {
   font-size: 16px;
 }
+
+/* ============================================
+   LIGHT THEME OVERRIDES
+   Activated when .theme-light is on <html>.
+   Flips all dark surfaces/text/borders to light
+   equivalents so unthemed components render right.
+   ============================================ */
+
+.theme-light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Backgrounds: dark slate → light surfaces */
+.theme-light .bg-slate-950 { background-color: #ffffff !important; }
+.theme-light .bg-slate-900 { background-color: #f1f5f9 !important; }
+.theme-light .bg-slate-850 { background-color: #e2e8f0 !important; }
+.theme-light .bg-slate-800 { background-color: #e2e8f0 !important; }
+.theme-light .bg-slate-750 { background-color: #cbd5e1 !important; }
+.theme-light .bg-slate-700 { background-color: #cbd5e1 !important; }
+
+/* Background opacity variants */
+.theme-light .bg-slate-950\/80 { background-color: rgba(255, 255, 255, 0.92) !important; }
+.theme-light .bg-slate-950\/70 { background-color: rgba(255, 255, 255, 0.8) !important; }
+.theme-light .bg-slate-900\/80 { background-color: rgba(241, 245, 249, 0.9) !important; }
+.theme-light .bg-slate-900\/60 { background-color: rgba(241, 245, 249, 0.75) !important; }
+.theme-light .bg-slate-900\/50 { background-color: rgba(241, 245, 249, 0.65) !important; }
+.theme-light .bg-slate-900\/40 { background-color: rgba(241, 245, 249, 0.5) !important; }
+.theme-light .bg-slate-900\/30 { background-color: rgba(241, 245, 249, 0.4) !important; }
+.theme-light .bg-slate-900\/20 { background-color: rgba(241, 245, 249, 0.4) !important; }
+.theme-light .bg-slate-800\/85 { background-color: rgba(226, 232, 240, 0.85) !important; }
+
+/* Hardcoded hex backgrounds */
+.theme-light .bg-\[\#090d16\] { background-color: #ffffff !important; }
+.theme-light .bg-\[\#0f172a\] { background-color: #ffffff !important; }
+.theme-light .bg-\[\#111a2e\] { background-color: #f1f5f9 !important; }
+.theme-light .bg-\[\#111a2e\]\/30 { background-color: rgba(241, 245, 249, 0.6) !important; }
+
+/* Text: light slate → dark readable text */
+.theme-light .text-white { color: #0f172a !important; }
+.theme-light .text-slate-100 { color: #0f172a !important; }
+.theme-light .text-slate-200 { color: #1e293b !important; }
+.theme-light .text-slate-300 { color: #334155 !important; }
+.theme-light .text-slate-400 { color: #475569 !important; }
+.theme-light .text-slate-500 { color: #64748b !important; }
+.theme-light .text-slate-600 { color: #475569 !important; }
+.theme-light .text-slate-450 { color: #475569 !important; }
+.theme-light .text-slate-350 { color: #334155 !important; }
+.theme-light .text-slate-355 { color: #334155 !important; }
+.theme-light .text-slate-205 { color: #1e293b !important; }
+.theme-light .text-slate-650 { color: #94a3b8 !important; }
+.theme-light .text-slate-150 { color: #334155 !important; }
+.theme-light .text-slate-250 { color: #1e293b !important; }
+.theme-light .text-\[\#f1f5f9\] { color: #0f172a !important; }
+.theme-light .text-\[\#fecdd3\] { color: #9f1239 !important; }
+
+/* Colored text: light shades → readable dark shades */
+.theme-light .text-indigo-300 { color: #4338ca !important; }
+.theme-light .text-indigo-400 { color: #4f46e5 !important; }
+.theme-light .text-indigo-350 { color: #4f46e5 !important; }
+.theme-light .text-indigo-200 { color: #3730a3 !important; }
+.theme-light .text-indigo-150 { color: #4338ca !important; }
+.theme-light .text-emerald-300 { color: #047857 !important; }
+.theme-light .text-emerald-400 { color: #059669 !important; }
+.theme-light .text-emerald-450 { color: #059669 !important; }
+.theme-light .text-emerald-350 { color: #047857 !important; }
+.theme-light .text-rose-300 { color: #be123c !important; }
+.theme-light .text-rose-400 { color: #e11d48 !important; }
+.theme-light .text-rose-450 { color: #e11d48 !important; }
+.theme-light .text-rose-205 { color: #be123c !important; }
+.theme-light .text-rose-350 { color: #be123c !important; }
+.theme-light .text-amber-300 { color: #b45309 !important; }
+.theme-light .text-amber-400 { color: #d97706 !important; }
+.theme-light .text-amber-450 { color: #d97706 !important; }
+.theme-light .text-red-200 { color: #b91c1c !important; }
+.theme-light .text-red-300 { color: #b91c1c !important; }
+.theme-light .text-red-400 { color: #dc2626 !important; }
+.theme-light .text-red-500 { color: #b91c1c !important; }
+.theme-light .text-cyan-400 { color: #0e7490 !important; }
+.theme-light .text-violet-400 { color: #6d28d9 !important; }
+.theme-light .text-fuchsia-400 { color: #a21caf !important; }
+.theme-light .text-purple-400 { color: #7e22ce !important; }
+.theme-light .text-sky-400 { color: #0369a1 !important; }
+.theme-light .text-pink-400 { color: #be185d !important; }
+
+/* Borders */
+.theme-light .border-slate-800 { border-color: #e2e8f0 !important; }
+.theme-light .border-slate-800\/80 { border-color: rgba(226, 232, 240, 0.9) !important; }
+.theme-light .border-slate-800\/50 { border-color: rgba(226, 232, 240, 0.7) !important; }
+.theme-light .border-slate-750 { border-color: #cbd5e1 !important; }
+.theme-light .border-slate-700 { border-color: #cbd5e1 !important; }
+.theme-light .border-slate-805 { border-color: #cbd5e1 !important; }
+.theme-light .border-slate-850 { border-color: #cbd5e1 !important; }
+.theme-light .border-slate-955 { border-color: #e2e8f0 !important; }
+
+/* Divides (table rows) */
+.theme-light .divide-slate-800 > * + * { border-color: #e2e8f0 !important; }
+
+/* Focus state for inputs using focus:bg-[#111a2e] */
+.theme-light .focus\:bg-\[\#111a2e\]:focus { background-color: #f1f5f9 !important; }
+
+/* Hover state for elements using hover:bg-[#111a2e]/30 */
+.theme-light .hover\:bg-\[\#111a2e\]\/30:hover { background-color: rgba(241, 245, 249, 0.6) !important; }
+
+/* Custom scrollbar for light mode */
+.theme-light ::-webkit-scrollbar { width: 8px; height: 8px; }
+.theme-light ::-webkit-scrollbar-track { background: #f1f5f9; }
+.theme-light ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.theme-light ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Colored card backgrounds (used for passport/visa slots, success cards) —
+   in dark mode these are bg-[#0f172a]; in light mode they should be white but
+   keep a subtle indigo tint so they stand out from the page */
+.theme-light .bg-\[\#0f172a\].shadow-md { background-color: #ffffff !important; }
+
+/* Keep the modal backdrop dark in light mode (it must dim the page) */
+.theme-light .bg-slate-950\/80.backdrop-blur-xs { background-color: rgba(15, 23, 42, 0.55) !important; }
+
