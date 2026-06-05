@@ -108,30 +108,103 @@ Return ONLY this JSON object — no prose, no markdown fences:
           })
         );
 
-        const combinedOcr = ocrResults.filter(Boolean).join("\n\n--- VISA STICKER ---\n");
-        if (combinedOcr.trim().length > 0) {
-          const structureResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${mistralApiKey}`
-            },
-            body: JSON.stringify({
-              model: "mistral-large-latest",
-              messages: [
-                { role: "system", content: "You extract structured JSON from OCR text exactly as instructed. Output only the JSON object, no other text or markdown fences." },
-                { role: "user", content: `${prompt}\n\n--- OCR TEXT ---\n${combinedOcr}` }
-              ],
-              response_format: { type: "json_object" }
-            })
-          });
+        const passportOcr = ocrResults[0] || "";
+        const visaOcr = (image_visa && ocrResults[1]) ? ocrResults[1] : "";
 
-          if (structureResponse.ok) {
-            const structureData = await structureResponse.json();
-            extractedText = structureData?.choices?.[0]?.message?.content;
-          } else {
-            const errBody = await structureResponse.text();
-            console.warn(`Mistral chat structure API error: ${structureResponse.status} ${errBody}`);
+        if (passportOcr.trim().length > 0) {
+          const passportStructurePrompt = `You are an OCR expert. Extract ONLY passport bio-page fields from the OCR text below. The text below is a passport ONLY — do not invent fields from any other document.
+
+Fields (all dates in YYYY-MM-DD):
+- last_name: family name (often in CAPS)
+- first_name: given names (often in CAPS)
+- dob: date of birth
+- passport_number: alphanumeric passport number
+- issue_date: passport ISSUE date (RECENT, e.g. 2024-11-19). NOT dob.
+- expiry_date: passport EXPIRY date (AFTER issue_date)
+- place_of_issue: CITY or REGION of issuance. On Algerian passports this is in the "Authority / Autorité" / "Lieu de délivrance" field. It is a place name (e.g. RELIZANE, ALGIERS, ORAN). "L'Etat" / "L'ETAT" / "The State" is the issuing government, NOT a place — IGNORE it.
+
+HARD RULES:
+1. ALL dates YYYY-MM-DD.
+2. issue_date is when the passport was issued (RECENT, e.g. 2024-11-19). It is NOT the birth date (DECADES AGO, e.g. 1958-05-12). If they look the same you misread the label.
+3. place_of_issue is a CITY (RELIZANE, ALGIERS, ORAN), NOT the authority name (L'Etat / The State).
+4. Return null for any field not clearly visible. Do NOT guess.
+
+Output ONLY this JSON object — no prose, no fences:
+{"last_name":string|null,"first_name":string|null,"dob":string|null,"passport_number":string|null,"issue_date":string|null,"expiry_date":string|null,"place_of_issue":string|null}
+
+--- PASSPORT OCR TEXT ---
+${passportOcr}`;
+
+          const visaStructurePrompt = visaOcr
+            ? `You are an OCR expert. Extract ONLY visa sticker fields from the OCR text below. The text below is a visa sticker ONLY — do not invent fields from any other document.
+
+Fields (all dates in YYYY-MM-DD):
+- previous_visa_number: visa number (near "ESP" / "VISADO" / "VISA" label). NOT the passport number.
+- visa_from: validity START date. Label is one of "DEL" (Spanish), "DU" (French), "FROM" (English).
+- visa_to: validity END date. Label is one of "AL" (Spanish), "AU" (French), "UNTIL" (English). AFTER visa_from.
+
+HARD RULES:
+1. ALL dates YYYY-MM-DD.
+2. visa_from uses DEL/DU/FROM label; visa_to uses AL/AU/UNTIL label. Do not swap.
+3. Return null for any field not clearly visible.
+
+Output ONLY this JSON — no prose, no fences:
+{"previous_visa_number":string|null,"visa_from":string|null,"visa_to":string|null}
+
+--- VISA STICKER OCR TEXT ---
+${visaOcr}`
+            : null;
+
+          const makeStructureCall = (userPrompt: string) =>
+            fetch("https://api.mistral.ai/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${mistralApiKey}`
+              },
+              body: JSON.stringify({
+                model: "mistral-large-latest",
+                messages: [
+                  { role: "system", content: "You extract structured JSON from OCR text exactly as instructed. Output only the JSON object, no other text or markdown fences." },
+                  { role: "user", content: userPrompt }
+                ],
+                response_format: { type: "json_object" }
+              })
+            });
+
+          const calls: Promise<Response>[] = [makeStructureCall(passportStructurePrompt)];
+          if (visaStructurePrompt) calls.push(makeStructureCall(visaStructurePrompt));
+
+          const [passportRes, visaRes] = await Promise.all(calls);
+
+          const passportPayload = passportRes.ok ? await passportRes.json() : null;
+          const visaPayload = visaRes && visaRes.ok ? await visaRes.json() : null;
+
+          let passportFields: any = null;
+          let visaFields: any = null;
+          try { passportFields = passportPayload?.choices?.[0]?.message?.content ? JSON.parse(passportPayload.choices[0].message.content) : null; } catch (_) {}
+          try { visaFields = visaPayload?.choices?.[0]?.message?.content ? JSON.parse(visaPayload.choices[0].message.content) : null; } catch (_) {}
+
+          if (passportFields) {
+            const merged = {
+              document_type: visaFields ? "both" : "passport",
+              is_blurry: false,
+              confidence_score: 0.9,
+              error_message: null,
+              extracted_data: {
+                last_name: passportFields.last_name ?? null,
+                first_name: passportFields.first_name ?? null,
+                dob: passportFields.dob ?? null,
+                passport_number: passportFields.passport_number ?? null,
+                issue_date: passportFields.issue_date ?? null,
+                expiry_date: passportFields.expiry_date ?? null,
+                place_of_issue: passportFields.place_of_issue ?? null,
+                previous_visa_number: visaFields?.previous_visa_number ?? null,
+                visa_from: visaFields?.visa_from ?? null,
+                visa_to: visaFields?.visa_to ?? null
+              }
+            };
+            extractedText = JSON.stringify(merged);
           }
         }
       } catch (ocrErr) {
