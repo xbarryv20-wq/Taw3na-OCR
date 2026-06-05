@@ -22,39 +22,32 @@ app.post("/api/extract", async (req, res) => {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const mistralApiKey = process.env.MISTRAL_API_KEY;
 
-    const prompt = `You are an OCR expert. Extract fields from passport and visa OCR text into a JSON object. Extract ONLY what is clearly readable. Do NOT guess or hallucinate. Do NOT copy one date field into another.
+    const prompt = `You are an OCR expert. You will receive 1 or 2 images.
+- IMAGE 1 is a passport bio page.
+- IMAGE 2 (if present) is a Schengen visa sticker.
+Extract the fields below into a JSON object. Extract ONLY what is clearly readable from the CORRECT image. Do NOT guess or hallucinate. Do NOT copy a field from the wrong image.
 
-==== PASSPORT FIELDS ====
+==== PASSPORT FIELDS (from IMAGE 1 ONLY) ====
+- last_name: family name (often CAPS).
+- first_name: given names (often CAPS).
+- dob: date of birth in YYYY-MM-DD.
+- passport_number: alphanumeric passport number.
+- issue_date: passport ISSUE date in YYYY-MM-DD. A RECENT date (last 10-20 years). It is NOT dob.
+- expiry_date: passport EXPIRY date in YYYY-MM-DD. AFTER issue_date.
+- place_of_issue: CITY or REGION of issuance. On Algerian passports this is in the "Authority / Autorité" / "Lieu de délivrance" row. It is a place name (e.g. RELIZANE, ALGIERS, ORAN). "L'Etat" / "L'ETAT" / "The State" is the issuing government, NOT a place — IGNORE it for this field.
 
-- last_name: the surname / family name (often in CAPS).
-- first_name: the given name(s) (often in CAPS).
-- dob: date of birth. Convert to YYYY-MM-DD.
-- passport_number: alphanumeric passport number (top right of bio page).
-- issue_date: passport ISSUE date (when it was issued). This is a RECENT date (typically within the last 10-20 years). It is NOT the same as dob.
-- expiry_date: passport EXPIRY date (when it expires). Usually 5-10 years AFTER issue_date.
-- place_of_issue: the CITY or REGION where the passport was issued (e.g. RELIZANE, ALGIERS, ORAN). This is a place name.
-  WARNING: on Algerian passports the "Authority / L'Etat / L'ETAT" field means "The State" — that is the issuing government body, NOT a place. IGNORE "L'Etat" / "The State" for this field. Use the actual city shown elsewhere (often under the "Lieu de délivrance" / "Place of Issue" label).
-
-==== VISA STICKER FIELDS ====
-
-- previous_visa_number: the visa number (printed near the label "ESP" or under "VISADO / VISA" on the sticker). This is NOT the passport number.
-- visa_from: visa validity START date. The label on the sticker is one of:
-    "DEL"   (Spanish "desde")
-    "DU"    (French "du")
-    "FROM"  (English)
-  Convert to YYYY-MM-DD. This date is BEFORE visa_to.
-- visa_to: visa validity END date. The label on the sticker is one of:
-    "AL"    (Spanish "al")
-    "AU"    (French "au")
-    "UNTIL" (English)
-  Convert to YYYY-MM-DD. This date is AFTER visa_from.
+==== VISA STICKER FIELDS (from IMAGE 2 ONLY, if present) ====
+- previous_visa_number: visa number (printed near "ESP" / "VISADO / VISA" label). NOT the passport number.
+- visa_from: visa validity START in YYYY-MM-DD. Label is one of: "DEL" (Spanish), "DU" (French), "FROM" (English).
+- visa_to: visa validity END in YYYY-MM-DD. Label is one of: "AL" (Spanish), "AU" (French), "UNTIL" (English). AFTER visa_from.
 
 ==== HARD RULES ====
-1. ALL dates MUST be YYYY-MM-DD. Convert DD/MM/YYYY, DD-MM-YY, DD MMM YYYY as needed.
-2. issue_date is NOT dob. issue_date is when the passport was issued (e.g. 2024-11-19). dob is when the holder was born (e.g. 1958-05-12). They are decades apart — if both dates look the same, you misread the label.
-3. place_of_issue is a CITY (RELIZANE), NOT the authority (L'Etat / The State). L'Etat is the issuing government, ignore it.
-4. visa_from uses DEL/DU/FROM label; visa_to uses AL/AU/UNTIL label. Do not swap them.
-5. If a field is not visible, illegible, or absent, return null. Do NOT guess.
+1. ALL dates YYYY-MM-DD. Convert DD/MM/YYYY or DD-MM-YY as needed.
+2. issue_date is when the passport was ISSUED (e.g. 2024-11-19). dob is when the holder was BORN (e.g. 1958-05-12). They are decades apart. If they look the same you misread the label.
+3. place_of_issue is a CITY (RELIZANE, ALGIERS, ORAN), NOT the authority (L'Etat / The State).
+4. visa_from uses DEL/DU/FROM; visa_to uses AL/AU/UNTIL. Do not swap.
+5. The visa sticker's "Expedido en / Issued in / Délivré à" city (e.g. "ORAN" on a Spain visa) is where the VISA was issued — it is NOT the passport's place_of_issue. Do NOT use it for passport fields.
+6. Return null for any field not visible. Do NOT guess.
 
 ==== OUTPUT ====
 Return ONLY this JSON object — no prose, no markdown fences:
@@ -79,10 +72,47 @@ Return ONLY this JSON object — no prose, no markdown fences:
 }`;
 
     let extractedText = null;
-    let usedProvider = "Mistral OCR";
+    let usedProvider = "Pixtral Large";
 
-    // 1. Try Mistral OCR (Primary) — purpose-built for passport / document OCR
+    // 1. Try Pixtral Large (Primary) — vision model, sees both images directly, no field mixing
     if (mistralApiKey) {
+      try {
+        const contentParts: any[] = [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: image } }
+        ];
+        if (image_visa) {
+          contentParts.push({ type: "image_url", image_url: { url: image_visa } });
+        }
+
+        const pixtralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${mistralApiKey}`
+          },
+          body: JSON.stringify({
+            model: "pixtral-large-latest",
+            messages: [{ role: "user", content: contentParts }],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (pixtralResponse.ok) {
+          const pixtralData = await pixtralResponse.json();
+          extractedText = pixtralData?.choices?.[0]?.message?.content;
+        } else {
+          const errBody = await pixtralResponse.text();
+          console.warn(`Pixtral Large API error: ${pixtralResponse.status} ${errBody}`);
+        }
+      } catch (pixtralErr) {
+        console.warn("Pixtral Large failed, falling back to Mistral OCR:", pixtralErr);
+      }
+    }
+
+    // 2. Fallback to Mistral OCR (2-step) if Pixtral Large failed
+    if (!extractedText && mistralApiKey) {
+      usedProvider = "Mistral OCR";
       try {
         const ocrImages = image_visa ? [image, image_visa] : [image];
         const ocrResults = await Promise.all(
@@ -212,7 +242,7 @@ ${visaOcr}`
       }
     }
 
-    // 2. Fallback to Gemini if Mistral OCR failed
+    // 3. Fallback to Gemini if Pixtral + Mistral OCR both failed
     if (!extractedText && geminiApiKey) {
       usedProvider = "Gemini";
       try {
@@ -256,7 +286,7 @@ ${visaOcr}`
       }
     }
 
-    // 3. Final fallback to Mistral chat (pixtral) if both above failed
+    // 4. Final fallback to Mistral chat (pixtral) if all above failed
     if (!extractedText && mistralApiKey) {
       usedProvider = "Mistral";
       try {
