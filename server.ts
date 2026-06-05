@@ -22,30 +22,47 @@ app.post("/api/extract", async (req, res) => {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const mistralApiKey = process.env.MISTRAL_API_KEY;
 
-    const prompt = `You are an OCR expert. Extract fields from the document image into JSON. Do NOT make up values — only extract what you can clearly read.
+    const prompt = `You are an OCR expert. Extract fields from passport and visa OCR text into a JSON object. Extract ONLY what is clearly readable. Do NOT guess or hallucinate. Do NOT copy one date field into another.
 
-Field mapping — use these exact labels on the document:
-- last_name: the surname / family name (e.g. "SMITH")
-- first_name: the given name(s) (e.g. "John")
-- dob: date of birth — label says "Date of Birth" or "DOB"
-- passport_number: passport number — label says "Passport No." or "Passport Number"
-- issue_date: date of issue — label says "Date of Issue" or "Issued"
-- expiry_date: date of expiry — label says "Date of Expiry" or "Expires"
-- place_of_issue: place of issue — label says "Place of Issue" or "Issuing Authority"
-- previous_visa_number: visa number — found next to the label "ESP" (NOT passport number)
-- visa_from: visa valid from date — label says "Du" or "Del" (French "from")
-- visa_to: visa valid until date — label says "Au" or "Al" (French "until")
+==== PASSPORT FIELDS ====
 
-CRITICAL:
-- ALL dates MUST be YYYY-MM-DD format. Convert DD/MM/YYYY if needed.
-- DO NOT mix up dates. Each date field has a specific label on the document. Read the label carefully.
-- If a field is not visible on the document, set it to null. Do NOT guess.
+- last_name: the surname / family name (often in CAPS).
+- first_name: the given name(s) (often in CAPS).
+- dob: date of birth. Convert to YYYY-MM-DD.
+- passport_number: alphanumeric passport number (top right of bio page).
+- issue_date: passport ISSUE date (when it was issued). This is a RECENT date (typically within the last 10-20 years). It is NOT the same as dob.
+- expiry_date: passport EXPIRY date (when it expires). Usually 5-10 years AFTER issue_date.
+- place_of_issue: the CITY or REGION where the passport was issued (e.g. RELIZANE, ALGIERS, ORAN). This is a place name.
+  WARNING: on Algerian passports the "Authority / L'Etat / L'ETAT" field means "The State" — that is the issuing government body, NOT a place. IGNORE "L'Etat" / "The State" for this field. Use the actual city shown elsewhere (often under the "Lieu de délivrance" / "Place of Issue" label).
 
-Output JSON schema:
+==== VISA STICKER FIELDS ====
+
+- previous_visa_number: the visa number (printed near the label "ESP" or under "VISADO / VISA" on the sticker). This is NOT the passport number.
+- visa_from: visa validity START date. The label on the sticker is one of:
+    "DEL"   (Spanish "desde")
+    "DU"    (French "du")
+    "FROM"  (English)
+  Convert to YYYY-MM-DD. This date is BEFORE visa_to.
+- visa_to: visa validity END date. The label on the sticker is one of:
+    "AL"    (Spanish "al")
+    "AU"    (French "au")
+    "UNTIL" (English)
+  Convert to YYYY-MM-DD. This date is AFTER visa_from.
+
+==== HARD RULES ====
+1. ALL dates MUST be YYYY-MM-DD. Convert DD/MM/YYYY, DD-MM-YY, DD MMM YYYY as needed.
+2. issue_date is NOT dob. issue_date is when the passport was issued (e.g. 2024-11-19). dob is when the holder was born (e.g. 1958-05-12). They are decades apart — if both dates look the same, you misread the label.
+3. place_of_issue is a CITY (RELIZANE), NOT the authority (L'Etat / The State). L'Etat is the issuing government, ignore it.
+4. visa_from uses DEL/DU/FROM label; visa_to uses AL/AU/UNTIL label. Do not swap them.
+5. If a field is not visible, illegible, or absent, return null. Do NOT guess.
+
+==== OUTPUT ====
+Return ONLY this JSON object — no prose, no markdown fences:
+
 {
-  "document_type": "passport" | "visa" | "unknown",
+  "document_type": "passport" | "visa" | "both" | "unknown",
   "is_blurry": boolean,
-  "confidence_score": number,
+  "confidence_score": number between 0 and 1,
   "error_message": string | null,
   "extracted_data": {
     "last_name": string | null,
@@ -100,7 +117,7 @@ Output JSON schema:
               "Authorization": `Bearer ${mistralApiKey}`
             },
             body: JSON.stringify({
-              model: "mistral-small-latest",
+              model: "mistral-large-latest",
               messages: [
                 { role: "system", content: "You extract structured JSON from OCR text exactly as instructed. Output only the JSON object, no other text or markdown fences." },
                 { role: "user", content: `${prompt}\n\n--- OCR TEXT ---\n${combinedOcr}` }
@@ -186,7 +203,7 @@ Output JSON schema:
             "Authorization": `Bearer ${mistralApiKey}`
           },
           body: JSON.stringify({
-            model: "pixtral-12b-2409",
+            model: "pixtral-large-latest",
             messages: [{ role: "user", content: contentParts }],
             response_format: { type: "json_object" }
           })
