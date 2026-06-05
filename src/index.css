@@ -7,9 +7,121 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-body {
-  font-family: var(--font-sans);
-  background-color: #090d16; /* Deep dark slate-indigo theme */
-  color: #f1f5f9; /* Slate 100 */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #090d16;
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+}
+
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+}
+
+/* Prevent iOS from zooming inputs by enforcing 16px+ on focusable fields */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+select,
+textarea {
+  font-size: max(16px, 0.75rem);
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+/* Hide number input spinners on mobile */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Momentum scrolling on iOS for scrollable containers */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* iOS-friendly scrollable area inside modal */
+.modal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Utility: min 44px touch target */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Safe area padding helpers */
+.pt-safe    { padding-top:    var(--safe-top); }
+.pb-safe    { padding-bottom: var(--safe-bottom); }
+.pl-safe    { padding-left:   var(--safe-left); }
+.pr-safe    { padding-right:  var(--safe-right); }
+.px-safe    { padding-left:   var(--safe-left); padding-right: var(--safe-right); }
+.py-safe    { padding-top:    var(--safe-top);  padding-bottom: var(--safe-bottom); }
+
+.mt-safe    { margin-top:    var(--safe-top); }
+.mb-safe    { margin-bottom: var(--safe-bottom); }
+
+/* Better focus visibility on mobile (keyboard nav still works) */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Animation for fade-in step transitions */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.25s ease-out; }
+
+@keyframes pulse-once {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+.animate-pulse-once { animation: pulse-once 0.8s ease-in-out 1; }
+
+/* Prevent long-press text selection on UI chrome (icons, badges, buttons) */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* File input button labels (some mobile browsers) */
+input[type="file"] {
+  font-size: 16px;
+}

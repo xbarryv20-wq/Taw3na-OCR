@@ -223,6 +223,17 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Body scroll lock when any modal/drawer is open (prevents background scroll on iOS)
+  useEffect(() => {
+    const anyOpen = isAddModalOpen || isEditModalOpen || isDetailOpen;
+    if (anyOpen) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => document.body.classList.remove("modal-open");
+  }, [isAddModalOpen, isEditModalOpen, isDetailOpen]);
+
   // Staff sync helpers
   const syncStaffToSupabase = async (staff_id: string, data: { name?: string; avatar_url?: string | null }) => {
     try {
@@ -520,11 +531,13 @@ export default function App() {
   const t = THEMES[theme];
 
   return (
-    <div className={`min-h-screen ${t.bg} ${t.text} font-sans pb-16 transition-colors`}>
+    <div className={`min-h-screen ${t.bg} ${t.text} font-sans pb-safe transition-colors`}>
       {/* Header */}
-      <header className={`${t.header} ${theme === "light" ? "" : "bg-[#0f172a]"} border-b ${t.border} shadow-lg relative overflow-hidden`}>
+      <header
+        className={`${t.header} ${theme === "light" ? "" : "bg-[#0f172a]"} border-b ${t.border} shadow-lg relative overflow-hidden pt-safe`}
+      >
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-        <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-5 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <motion.div
               whileHover={{ rotate: 360, scale: 1.05 }}
@@ -626,7 +639,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-5">
+      <main className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 space-y-5">
         {activeTab === "dashboard" && (
           <div className="space-y-5 animate-fade-in">
             <DashboardCards clients={clientRecords} staff={staffMembers} />
@@ -1303,7 +1316,8 @@ export default function App() {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-5 right-5 bg-slate-900 border border-emerald-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 max-w-sm z-50"
+            className="fixed left-3 right-3 bottom-5 pb-safe sm:left-auto sm:right-5 sm:bottom-5 bg-slate-900 border border-emerald-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 sm:max-w-sm z-50"
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.25rem)" }}
           >
             <div className="w-7 h-7 rounded-lg bg-emerald-950/50 border border-emerald-900/50 flex items-center justify-center shrink-0">
               <Check className="w-4 h-4 text-emerald-400" />
@@ -1316,7 +1330,8 @@ export default function App() {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-5 right-5 bg-slate-900 border border-rose-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 max-w-sm z-50"
+            className="fixed left-3 right-3 bottom-5 pb-safe sm:left-auto sm:right-5 sm:bottom-5 bg-slate-900 border border-rose-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 sm:max-w-sm z-50"
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.25rem)" }}
           >
             <div className="w-7 h-7 rounded-lg bg-rose-950/50 border border-rose-900/50 flex items-center justify-center shrink-0">
               <X className="w-4 h-4 text-rose-400" />
@@ -1329,7 +1344,8 @@ export default function App() {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-5 right-5 bg-slate-900 border border-indigo-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 max-w-sm z-50"
+            className="fixed left-3 right-3 bottom-5 pb-safe sm:left-auto sm:right-5 sm:bottom-5 bg-slate-900 border border-indigo-700/50 text-white rounded-xl shadow-2xl p-3 flex items-center gap-2 sm:max-w-sm z-50"
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.25rem)" }}
           >
             <div className="w-7 h-7 rounded-lg bg-indigo-950/50 border border-indigo-900/50 flex items-center justify-center shrink-0">
               <Info className="w-4 h-4 text-indigo-400" />

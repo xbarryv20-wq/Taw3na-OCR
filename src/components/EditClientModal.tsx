@@ -128,35 +128,39 @@ export default function EditClientModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex flex-col sm:flex sm:items-center sm:justify-center sm:p-4 bg-slate-950/60 backdrop-blur-xs">
       {/* Background Mask */}
       <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" onClick={onClose} />
 
       {/* Main Modal container */}
-      <div className="relative w-full max-w-2xl bg-[#0f172a] rounded-2xl shadow-xl border border-slate-800 overflow-hidden transform transition-all flex flex-col max-h-[95vh] sm:max-h-[90vh] z-10">
-        
+      <div className="relative w-full sm:max-w-2xl bg-[#0f172a] sm:rounded-2xl shadow-xl border-0 sm:border border-slate-800 overflow-hidden transform transition-all flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] z-10">
+
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-950/50 text-indigo-400 rounded-lg">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-900/50 pt-safe">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+            <div className="p-1.5 bg-indigo-950/50 text-indigo-400 rounded-lg shrink-0">
               <Sparkles className="w-5 h-5 text-indigo-400" />
             </div>
-            <div>
-              <h3 className="font-extrabold text-[#f1f5f9] text-sm sm:text-base leading-tight">
-                Edit Client Registry Profile
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-[#f1f5f9] text-sm sm:text-base leading-tight truncate">
+                Edit Client Profile
               </h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+              <p className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">
                 Updating passport: {record.passport_number || "PENDING"}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-350 hover:text-white transition rounded-lg cursor-pointer">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="touch-target shrink-0 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition rounded-lg"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body - Scrollable content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 flex flex-col text-xs bg-[#0f172a]">
+        <form onSubmit={handleSubmit} className="modal-scroll flex-1 flex flex-col text-xs bg-[#0f172a] overflow-y-auto">
           <div className="p-4 sm:p-6 space-y-4">
             
             {/* Error Banner */}
@@ -232,7 +236,9 @@ export default function EditClientModal({
                   <div className="relative flex items-center">
                     <Phone className="w-3.5 h-3.5 text-slate-500 absolute left-3" />
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="+213 555 12 34 56"
@@ -281,6 +287,7 @@ export default function EditClientModal({
                   <div className="relative flex items-center">
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={versment}
@@ -382,18 +389,18 @@ export default function EditClientModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end items-center gap-2 mt-auto">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end items-center gap-2 mt-auto pb-safe">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-850 hover:text-white rounded-lg transition cursor-pointer"
+              className="touch-target px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-xs font-extrabold text-white bg-indigo-650 hover:bg-indigo-600 disabled:bg-slate-300 rounded-lg transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="touch-target px-5 py-2 text-xs font-extrabold text-white bg-indigo-650 hover:bg-indigo-600 disabled:bg-slate-300 rounded-lg transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -401,7 +408,7 @@ export default function EditClientModal({
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5" /> Save Profile Edits
+                  <Check className="w-3.5 h-3.5" /> Save
                 </>
               )}
             </button>

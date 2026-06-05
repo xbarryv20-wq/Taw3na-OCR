@@ -597,22 +597,22 @@ export default function AddClientModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" id="add-client-modal-overlay">
+    <div className="fixed inset-0 z-50" id="add-client-modal-overlay">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs" onClick={onClose} />
 
       {/* Main Alignment */}
-      <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
-        <div className="relative w-full max-w-2xl bg-[#090d16] text-[#f1f5f9] rounded-2xl shadow-2xl border border-slate-800 overflow-hidden transform transition-all flex flex-col max-h-[95vh] sm:max-h-[90vh]">
-          
+      <div className="fixed inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 flex flex-col">
+        <div className="relative w-full sm:max-w-2xl bg-[#090d16] text-[#f1f5f9] sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-800 overflow-hidden transform transition-all flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh]">
+
           {/* Modal Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
-            <div>
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-900/50 pt-safe">
+            <div className="min-w-0 flex-1 pr-2">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-indigo-400 w-4.5 h-4.5" />
-                Add Applicant Stepper Wizard
+                <Sparkles className="text-indigo-400 w-4.5 h-4.5 shrink-0" />
+                <span className="truncate">Add Applicant Wizard</span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 Step {step > 5 ? 5 : step} of 5: {
                   step === 1 ? "Choose assigned agent" :
                   step === 2 ? "Upload client photo" :
@@ -622,21 +622,25 @@ export default function AddClientModal({
                 }
               </p>
             </div>
-            <button onClick={onClose} className="p-1 px-1.5 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white transition rounded-lg cursor-pointer">
-              <X className="w-4 h-4" />
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="touch-target shrink-0 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-300 hover:text-white transition rounded-lg"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Stepper progress track bar */}
           <div className="h-1 bg-slate-800 w-full relative">
-            <div 
-              className="h-full bg-indigo-500 transition-all duration-300" 
+            <div
+              className="h-full bg-indigo-500 transition-all duration-300"
               style={{ width: `${Math.min(100, (step / 5) * 100)}%` }}
             />
           </div>
 
           {/* Modal Content - Scrollable */}
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 text-xs">
+          <div className="modal-scroll p-4 sm:p-6 overflow-y-auto flex-1 text-xs">
             
             {/* ALERT BOX if warning exists */}
             {errorBanner && (
@@ -770,9 +774,9 @@ export default function AddClientModal({
                     </p>
 
                     <div className="flex flex-wrap gap-2">
-                      <label className="px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white transition font-bold text-xs rounded-xl shadow-sm cursor-pointer flex items-center gap-2">
+                      <label className="px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white transition font-bold text-xs rounded-xl shadow-sm cursor-pointer flex items-center gap-2 min-h-[40px]">
                         <Upload className="w-4 h-4" />
-                        Upload Gallery File
+                        Upload Gallery
                         <input
                           type="file"
                           ref={fileInputRefPortrait}
@@ -830,25 +834,26 @@ export default function AddClientModal({
                     </div>
 
                     <div className="flex flex-wrap gap-1">
-                      <button 
+                      <button
                         onClick={() => generateMockDocumentAndSet("passport")}
-                        className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/30 text-rose-350 text-[10px] rounded border border-rose-900/50 font-semibold cursor-pointer"
+                        className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/30 text-rose-350 text-[10px] rounded border border-rose-900/50 font-semibold cursor-pointer min-h-[32px]"
                       >
-                        ⚡ Inject Clear Presets
+                        ⚡ Inject Clear
                       </button>
-                      <button 
+                      <button
                         onClick={() => generateMockDocumentAndSet("blurry")}
-                        className="px-2 py-1 bg-red-950/40 hover:bg-red-900/30 text-red-350 text-[10px] rounded border border-red-900/50 font-semibold cursor-pointer"
+                        className="px-2 py-1 bg-red-950/40 hover:bg-red-900/30 text-red-350 text-[10px] rounded border border-red-900/50 font-semibold cursor-pointer min-h-[32px]"
                         title="Intentionally test the blur warning detector"
                       >
-                        ⚠️ Blur Preset
+                        ⚠️ Blur
                       </button>
-                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold">
-                        Browse file
+                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
+                        <Camera className="w-3 h-3 inline mr-1" /> Camera / Gallery
                         <input
                           type="file"
                           ref={fileInputRefPassport}
                           accept="image/*"
+                          capture="environment"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -888,18 +893,19 @@ export default function AddClientModal({
                     </div>
 
                     <div className="flex flex-wrap gap-1">
-                      <button 
+                      <button
                         onClick={() => generateMockDocumentAndSet("visa")}
-                        className="px-2 py-1 bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-350 text-[10px] rounded border border-emerald-900/50 font-semibold cursor-pointer"
+                        className="px-2 py-1 bg-emerald-950/40 hover:bg-emerald-900/30 text-emerald-350 text-[10px] rounded border border-emerald-900/50 font-semibold cursor-pointer min-h-[32px]"
                       >
                         ⚡ Inject Sticker
                       </button>
-                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold">
-                        Browse file
+                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
+                        <Camera className="w-3 h-3 inline mr-1" /> Camera / Gallery
                         <input
                           type="file"
                           ref={fileInputRefVisa}
                           accept="image/*"
+                          capture="environment"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -1140,7 +1146,9 @@ export default function AddClientModal({
                       Applicant Phone Number
                     </label>
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       value={phone_number}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="e.g. +213 555 12 34 56"
@@ -1172,6 +1180,7 @@ export default function AddClientModal({
                     <div className="relative">
                       <input
                         type="number"
+                        inputMode="decimal"
                         value={versment}
                         onChange={(e) => setVersment(e.target.value)}
                         placeholder="e.g. 10"
@@ -1294,19 +1303,19 @@ export default function AddClientModal({
 
           {/* Modal Footer Controls */}
           {step <= 5 && (
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center gap-2 pb-safe">
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
                 disabled={step === 1 || isExtracting || isSyncing}
-                className={`flex items-center gap-1 font-semibold text-xs border border-slate-800 bg-slate-800 rounded-lg py-1.5 px-3 transition shadow-xs cursor-pointer ${
+                className={`touch-target flex items-center justify-center gap-1 font-semibold text-xs border border-slate-800 bg-slate-800 rounded-lg py-2 px-3 transition shadow-xs ${
                   step === 1 || isExtracting || isSyncing
                     ? "opacity-40 cursor-not-allowed text-slate-500"
-                    : "text-slate-200 hover:bg-slate-700 hover:text-white"
+                    : "text-slate-200 hover:bg-slate-700 hover:text-white cursor-pointer"
                 }`}
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Back
+                <span className="hidden xs:inline sm:inline">Back</span>
               </button>
 
               <div className="flex gap-2 font-mono text-[10px] text-slate-500 font-bold">
@@ -1342,8 +1351,8 @@ export default function AddClientModal({
                     setErrorBanner(null);
                   }}
                   disabled={step === 3} // On step 3, must click the AI Extract button
-                  className={`flex items-center gap-1 bg-indigo-650 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold text-xs py-1.5 px-3.5 rounded-lg transition shadow-xs cursor-pointer ${
-                    step === 3 ? "opacity-40 cursor-not-allowed" : ""
+                  className={`touch-target flex items-center justify-center gap-1 bg-indigo-650 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow-xs ${
+                    step === 3 ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
                   }`}
                 >
                   Next

@@ -142,28 +142,29 @@ export default function ClientDetailDrawer({ isOpen, record, onClose, onEdit }: 
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 32 }}
-            className="fixed top-0 right-0 bottom-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl z-50 bg-[#0f172a] border-l border-slate-800 shadow-2xl overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 w-full sm:max-w-md md:max-w-lg lg:max-w-xl z-50 bg-[#0f172a] border-l border-slate-800 shadow-2xl flex flex-col"
           >
-            <div className="sticky top-0 z-10 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800 px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-indigo-950/50 border border-indigo-900/50 text-indigo-300">
+            <div className="sticky top-0 z-10 bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between pt-safe">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-indigo-950/50 border border-indigo-900/50 text-indigo-300 shrink-0">
                   <User className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-sm font-extrabold text-white leading-none">Client Profile</h2>
-                  <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: {record.id}</p>
+                  <p className="text-[10px] text-slate-400 mt-1 font-mono truncate">ID: {record.id}</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
+                aria-label="Close"
+                className="touch-target shrink-0 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
                 title="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="modal-scroll overflow-y-auto p-4 sm:p-5 space-y-5 flex-1">
               {/* Hero header */}
               <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-5">
                 <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-tr ${gradient} opacity-20 blur-2xl`} />
@@ -357,16 +358,16 @@ export default function ClientDetailDrawer({ isOpen, record, onClose, onEdit }: 
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 pb-safe">
                 <button
                   onClick={() => onEdit(record)}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-extrabold rounded-xl shadow-md transition"
+                  className="touch-target flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-extrabold rounded-xl shadow-md transition"
                 >
                   Edit Profile
                 </button>
                 <button
                   onClick={onClose}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition"
+                  className="touch-target px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition"
                 >
                   Close
                 </button>
