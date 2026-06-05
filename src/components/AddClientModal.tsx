@@ -603,7 +603,7 @@ export default function AddClientModal({
 
       {/* Main Alignment */}
       <div className="fixed inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 flex flex-col">
-        <div className="relative w-full sm:max-w-2xl bg-[#090d16] text-[#f1f5f9] sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-800 overflow-hidden transform transition-all flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh]">
+        <div className="relative w-full sm:max-w-2xl bg-[#090d16] text-[#f1f5f9] sm:rounded-2xl shadow-2xl border-0 sm:border border-slate-800 overflow-hidden transform transition-all flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] min-h-0">
 
           {/* Modal Header */}
           <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-900/50 pt-safe">
@@ -640,7 +640,7 @@ export default function AddClientModal({
           </div>
 
           {/* Modal Content - Scrollable */}
-          <div className="modal-scroll p-4 sm:p-6 overflow-y-auto flex-1 text-xs">
+          <div className="modal-scroll p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 text-xs">
             
             {/* ALERT BOX if warning exists */}
             {errorBanner && (
@@ -1216,25 +1216,6 @@ export default function AddClientModal({
                     </div>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={executeFinalSaveAndSync}
-                  disabled={isSyncing}
-                  className="w-full py-3 px-4 bg-indigo-650 hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-indigo-950/45 cursor-pointer"
-                >
-                  {isSyncing ? (
-                    <>
-                      <RefreshCw className="w-4.5 h-4.5 animate-spin" />
-                      <span>Synchronizing package & pushing rows...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Database className="w-4.5 h-4.5" />
-                      <span>Save Applicant & Push to Supabase</span>
-                    </>
-                  )}
-                </button>
               </div>
             )}
 
@@ -1360,7 +1341,24 @@ export default function AddClientModal({
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <span className="w-20" /> // spacer
+                <button
+                  type="button"
+                  onClick={executeFinalSaveAndSync}
+                  disabled={isSyncing}
+                  className="touch-target flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-slate-700 disabled:text-slate-400 text-white font-extrabold text-xs py-2 px-4 rounded-lg transition shadow-md cursor-pointer"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Save & Sync</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           )}

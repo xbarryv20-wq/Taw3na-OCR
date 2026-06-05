@@ -38,9 +38,7 @@ body {
 
 body.modal-open {
   overflow: hidden;
-  position: fixed;
-  inset: 0;
-  width: 100%;
+  touch-action: none;
 }
 
 /* Prevent iOS from zooming inputs by enforcing 16px+ on focusable fields */

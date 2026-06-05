@@ -223,15 +223,25 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Body scroll lock when any modal/drawer is open (prevents background scroll on iOS)
+  // Body scroll lock when any modal/drawer is open.
+  // We only toggle overflow:hidden — we do NOT set position:fixed on body.
+  // position:fixed on body breaks 100dvh / 100vh in iOS Safari and on
+  // Android Chrome (URL/navigation bar resize collapses the layout).
   useEffect(() => {
     const anyOpen = isAddModalOpen || isEditModalOpen || isDetailOpen;
+    const body = document.body;
+    const prevOverflow = body.style.overflow;
     if (anyOpen) {
-      document.body.classList.add("modal-open");
+      body.style.overflow = "hidden";
+      body.style.touchAction = "none";
     } else {
-      document.body.classList.remove("modal-open");
+      body.style.overflow = "";
+      body.style.touchAction = "";
     }
-    return () => document.body.classList.remove("modal-open");
+    return () => {
+      body.style.overflow = prevOverflow;
+      body.style.touchAction = "";
+    };
   }, [isAddModalOpen, isEditModalOpen, isDetailOpen]);
 
   // Staff sync helpers
