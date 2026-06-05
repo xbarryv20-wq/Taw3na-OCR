@@ -773,10 +773,10 @@ export default function AddClientModal({
                       Please upload the biometric white background face photograph from your files.
                     </p>
 
-                    <div className="flex flex-wrap gap-2">
-                      <label className="px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white transition font-bold text-xs rounded-xl shadow-sm cursor-pointer flex items-center gap-2 min-h-[40px]">
+                    <div className="flex flex-wrap gap-2 relative">
+                      <label className="relative px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white transition font-bold text-xs rounded-xl shadow-sm cursor-pointer flex items-center gap-2 min-h-[40px]">
                         <Upload className="w-4 h-4" />
-                        Upload Gallery
+                        Upload Photo
                         <input
                           type="file"
                           ref={fileInputRefPortrait}
@@ -789,7 +789,8 @@ export default function AddClientModal({
                               r.readAsDataURL(file);
                             }
                           }}
-                          className="hidden"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          style={{ fontSize: "16px" }}
                         />
                       </label>
                     </div>
@@ -847,13 +848,12 @@ export default function AddClientModal({
                       >
                         ⚠️ Blur
                       </button>
-                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
-                        <Camera className="w-3 h-3 inline mr-1" /> Camera / Gallery
+                      <label className="relative px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
+                        <Camera className="w-3 h-3 inline mr-1" /> Choose Photo
                         <input
                           type="file"
                           ref={fileInputRefPassport}
                           accept="image/*"
-                          capture="environment"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -862,7 +862,8 @@ export default function AddClientModal({
                               r.readAsDataURL(file);
                             }
                           }}
-                          className="hidden"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          style={{ fontSize: "16px" }}
                         />
                       </label>
                     </div>
@@ -899,13 +900,12 @@ export default function AddClientModal({
                       >
                         ⚡ Inject Sticker
                       </button>
-                      <label className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
-                        <Camera className="w-3 h-3 inline mr-1" /> Camera / Gallery
+                      <label className="relative px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] rounded border border-slate-700 cursor-pointer text-center flex-1 font-semibold flex items-center justify-center min-h-[32px]">
+                        <Camera className="w-3 h-3 inline mr-1" /> Choose Photo
                         <input
                           type="file"
                           ref={fileInputRefVisa}
                           accept="image/*"
-                          capture="environment"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -914,7 +914,8 @@ export default function AddClientModal({
                               r.readAsDataURL(file);
                             }
                           }}
-                          className="hidden"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          style={{ fontSize: "16px" }}
                         />
                       </label>
                     </div>

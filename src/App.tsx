@@ -1156,7 +1156,7 @@ export default function App() {
                         <User className="w-4 h-4 text-slate-500" />
                       )}
                     </div>
-                    <label className={`px-3 py-1.5 ${theme === "light" ? "bg-slate-200 hover:bg-slate-300" : "bg-slate-800 hover:bg-slate-700"} text-xs font-bold rounded-md border ${t.border} cursor-pointer flex items-center gap-1`}>
+                    <label className={`relative px-3 py-1.5 ${theme === "light" ? "bg-slate-200 hover:bg-slate-300" : "bg-slate-800 hover:bg-slate-700"} text-xs font-bold rounded-md border ${t.border} cursor-pointer flex items-center gap-1`}>
                       <Upload className="w-3 h-3" />
                       <input
                         type="file"
@@ -1169,7 +1169,8 @@ export default function App() {
                             r.readAsDataURL(f);
                           }
                         }}
-                        className="hidden"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        style={{ fontSize: "16px" }}
                       />
                     </label>
                   </div>
@@ -1240,7 +1241,8 @@ export default function App() {
                               r.readAsDataURL(f);
                             }
                           }}
-                          className="hidden"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          style={{ fontSize: "16px" }}
                         />
                       </label>
                       <div className="flex-1 min-w-0">
